@@ -8,8 +8,11 @@ import piexif
 import piexif.helper
 from PIL import Image
 from rich.console import Console
+from .yaml_highlighter import YamlHighlighter, yaml_theme
 
-console = Console()
+json_console = Console()
+yaml_console = Console(highlighter=YamlHighlighter(), theme=yaml_theme)
+error_console = Console(style="bold red", stderr=True)
 
 IGNORED_INFO_KEYS = {
     'jfif', 'jfif_version', 'jfif_unit', 'jfif_density', 'dpi', 'exif',
@@ -53,7 +56,7 @@ def read_geninfo(image: Image.Image) -> tuple[str | None, dict]:
 Negative prompt: {json_info["uc"]}
 Steps: {json_info["steps"]}, Sampler: {sampler}, CFG scale: {json_info["scale"]}, Seed: {json_info["seed"]}, Size: {image.width}x{image.height}, Clip skip: 2, ENSD: 31337"""
         except Exception:
-            console.print_exception("Error parsing NovelAI image generation parameters", exc_info=True)
+            error_console.print_exception("Error parsing NovelAI image generation parameters", exc_info=True)
 
     return geninfo, items
 
@@ -74,7 +77,7 @@ def parse_geninfo(geninfo):
             geninfo_yaml_lines.append(geninfo_lines[1])
 
     if remaining_geninfo_line.startswith('Steps: '):
-        unquoted_comma_regex = r'''(,)(?=(?:[^"]|"[^"]*")*$)'''
+        unquoted_comma_regex = r'(,)(?=(?:[^"]|"[^"]*")*$)'
         remaining_geninfo_fields = re.split(unquoted_comma_regex, remaining_geninfo_line)
 
         for field in remaining_geninfo_fields:
@@ -85,7 +88,7 @@ def parse_geninfo(geninfo):
                 geninfo_yaml_lines.append(field)
 
     if len(geninfo_yaml_lines) == 0:
-        console.print_exception(f'Error parsing geninfo:', geninfo)
+        error_console.print_exception(f'Error parsing geninfo:', geninfo)
         sys.exit(1)
 
     return '\n'.join(geninfo_yaml_lines)
@@ -109,7 +112,7 @@ def main():
         if sys.stdin.readable():
             input_path = sys.stdin.readline().strip()
         else:
-            console.print_exception('No input image path provided')
+            error_console.print_exception('No input image path provided')
             sys.exit(1)
 
     input_image = Image.open(input_path)
@@ -125,7 +128,7 @@ def main():
         highlight = False
 
     if args.format == 'yaml':
-        console.print(geninfo_yaml, highlight=highlight)
+        yaml_console.out(geninfo_yaml, highlight=highlight)
         sys.exit(0)
 
     geninfo_json = yaml_to_json(geninfo_yaml)
@@ -140,7 +143,7 @@ def main():
         indent = None
 
     output_str = json.dumps(output_obj, indent=indent)
-    console.print(output_str, highlight=highlight)
+    json_console.out(output_str, highlight=highlight)
 
 if __name__ == '__main__':
     main()
