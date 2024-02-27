@@ -59,19 +59,35 @@ Steps: {json_info["steps"]}, Sampler: {sampler}, CFG scale: {json_info["scale"]}
 
 def parse_geninfo(geninfo):
     geninfo_lines = geninfo.splitlines()
-    geninfo_yaml_lines = [
-        f'Positive prompt: {geninfo_lines[0]}',
-        geninfo_lines[1]
-    ]
-    unquoted_comma_regex = r'''(,)(?=(?:[^"]|"[^"]*")*$)'''
-    remaining_geninfo_fields = re.split(unquoted_comma_regex, geninfo_lines[2])
 
-    for field in remaining_geninfo_fields:
-        if field[-1] == ',':
-            field = field[:-1]
-        field = field.strip()
-        if field:
-            geninfo_yaml_lines.append(field)
+    if geninfo_lines[0].startswith('Steps: '):
+        remaining_geninfo_line = geninfo_lines[0]
+    elif geninfo_lines[0].startswith('Negative prompt: '):
+        remaining_geninfo_line = geninfo_lines[1:]
+        geninfo_yaml_lines = [geninfo_lines[0]]
+    else:
+        geninfo_yaml_lines = [f'Positive prompt: {geninfo_lines[0]}']
+        if geninfo_lines[1].startswith('Steps: '):
+            remaining_geninfo_line = geninfo_lines[1]
+        else:
+            remaining_geninfo_line = geninfo_lines[2]
+            geninfo_yaml_lines.append(geninfo_lines[1])
+
+    if remaining_geninfo_line.startswith('Steps: '):
+        unquoted_comma_regex = r'''(,)(?=(?:[^"]|"[^"]*")*$)'''
+        remaining_geninfo_fields = re.split(unquoted_comma_regex, remaining_geninfo_line)
+
+        for field in remaining_geninfo_fields:
+            if field[-1] == ',':
+                field = field[:-1]
+            field = field.strip()
+            if field:
+                geninfo_yaml_lines.append(field)
+
+    if len(geninfo_yaml_lines) == 0:
+        console.print_exception(f'Error parsing geninfo:', geninfo)
+        sys.exit(1)
+
     return '\n'.join(geninfo_yaml_lines)
 
 def yaml_to_json(yaml_str):
