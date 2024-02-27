@@ -58,7 +58,7 @@ Steps: {json_info["steps"]}, Sampler: {sampler}, CFG scale: {json_info["scale"]}
 def parse_geninfo(geninfo):
     geninfo_lines = geninfo.splitlines()
     geninfo_yaml_lines = [
-        f'Positive Prompt: {geninfo_lines[0]}',
+        f'Positive prompt: {geninfo_lines[0]}',
         geninfo_lines[1]
     ]
     unquoted_comma_regex = r'''(,)(?=(?:[^"]|"[^"]*")*$)'''
